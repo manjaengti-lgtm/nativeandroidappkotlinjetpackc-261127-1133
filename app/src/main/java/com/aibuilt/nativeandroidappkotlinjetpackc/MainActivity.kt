@@ -1,5 +1,6 @@
 package com.aibuilt.nativeandroidappkotlinjetpackc
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -11,6 +12,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -125,6 +127,68 @@ import okhttp3.Request
 import org.jsoup.Jsoup
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
+
+private const val START_URL = "https://www.example.com"
+
+class MainActivity : ComponentActivity() {
+
+    private lateinit var webView: WebView
+
+    @SuppressLint("SetJavaScriptEnabled")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        webView = WebView(this).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): Boolean {
+                    val uri = request?.url ?: return false
+                    val scheme = uri.scheme ?: return false
+                    if (scheme == "http" || scheme == "https") return false
+                    openExternal(this@MainActivity, uri)
+                    return true
+                }
+            }
+            webChromeClient = WebChromeClient()
+        }
+
+        CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            setAcceptThirdPartyCookies(webView, true)
+        }
+
+        setContentView(webView)
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (webView.canGoBack()) {
+                    webView.goBack()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+
+        webView.loadUrl(START_URL)
+    }
+
+    private fun openExternal(context: Context, uri: Uri) {
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (e: Exception) {
+            // No app available to handle this URI; ignore.
+        }
+    }
+}
 
 private val Context.prefs by androidx.datastore.preferences.preferencesDataStore(name = "pornplayer")
 private val Accent = Color(0xFFFF9000)
