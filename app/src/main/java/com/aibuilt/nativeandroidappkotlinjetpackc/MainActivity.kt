@@ -90,6 +90,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -151,8 +152,6 @@ data class Video(
     val source: String = Site.Pornhub.name
 )
 
-data class Category(val title: String, val url: String, val thumbnail: String = "")
-
 interface Source {
     val site: Site
     suspend fun categoryList(): List<Category>
@@ -209,7 +208,11 @@ private class HtmlSource(override val site: Site) : Source {
             val title = anchor.text().trim()
             val href = anchor.absUrl("href")
             if (title.length in 2..35 && href.contains(Regex("categories|category|/tags/|/tag/"))) {
-                Category(title, href, anchor.selectFirst("img")?.absUrl("src").orEmpty())
+                Category(
+                    url = href,
+                    title = title,
+                    thumbnail = anchor.selectFirst("img")?.absUrl("src").orEmpty()
+                )
             } else null
         }.distinctBy { it.url }.sortedBy { it.title.lowercase() }
         check(result.isNotEmpty()) { "Source changed, try another" }
@@ -475,8 +478,8 @@ class AppViewModel(private val appContext: Context) : ViewModel() {
     }
 
     fun favourite(video: Video) = viewModelScope.launch {
-        dao.saveFavourite(
-            FavouriteEntity(video.url, video.title, video.thumbnail, video.duration, video.source)
+dao.saveFavourite(
+FavouriteEntity(video.url, video.title, video.thumbnail, video.duration, video.source)
         )
     }
 }
@@ -495,8 +498,10 @@ class MainActivity : ComponentActivity() {
 fun PornPlayerApp() {
     val context = LocalContext.current
     val vm: AppViewModel = viewModel(
-        factory = androidx.lifecycle.viewmodel.initializer {
-            AppViewModel(context.applicationContext)
+        factory = androidx.lifecycle.viewmodel.viewModelFactory {
+            initializer {
+                AppViewModel(context.applicationContext)
+            }
         }
     )
     val accepted by vm.remembered.collectAsState()
