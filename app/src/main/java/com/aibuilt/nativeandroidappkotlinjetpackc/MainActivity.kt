@@ -812,7 +812,37 @@ private fun VideoScreen(url: String, vm: AppViewModel, nav: androidx.navigation.
         if (error.isNotBlank()) TextButton(onClick = { error = ""; web = true }) { Text("Retry") }
         Text("Related videos", Modifier.padding(16.dp), color = Orange)
         val videos by vm.videos.collectAsState()
-        LazyVerticalGrid(columns = GridCells.Adaptive(165.dp), modifier = Modifier.height(500.dp), contentPadding = PaddingValues(8.dp)) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(165.dp),
+            contentPadding = PaddingValues(8.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 420.dp)
+        ) {
+            items(videos.filter { it.url != url }.take(12), key = { it.url }) { related ->
+                VideoCard(related, nav)
+            }
+        }
+    }
+}
+
+private fun androidx.navigation.NavController.contextOpen(url: String) {
+    val context = contextForShare
+    runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }
+}
+
+private val contextForShare = android.app.Application()
+
+private fun contextShare(url: String) {
+    runCatching {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, url)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        contextForShare.startActivity(Intent.createChooser(intent, "Share video").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}olumns = GridCells.Adaptive(165.dp), modifier = Modifier.height(500.dp), contentPadding = PaddingValues(8.dp)) {
             items(videos.filterNot { it.url == url }) { VideoCard(it, nav) }
         }
     }
