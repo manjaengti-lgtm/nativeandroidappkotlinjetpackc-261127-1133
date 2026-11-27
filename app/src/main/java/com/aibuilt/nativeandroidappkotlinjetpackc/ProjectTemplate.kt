@@ -1,0 +1,3 @@
+if [ ! -f app/signing.keystore ]; then
+  keytool -genkeypair ... -keystore app/signing.keystore ...
+  git add app/signing.keystore
